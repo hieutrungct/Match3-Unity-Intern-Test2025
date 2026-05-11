@@ -87,6 +87,15 @@ public class BoardController : MonoBehaviour
             OnBoardEmpty?.Invoke();
     }
 
+    public bool IsBoardEmpty()
+    {
+        for (int x = 0; x < m_gameSettings.BoardSizeX; x++)
+            for (int y = 0; y < m_gameSettings.BoardSizeY; y++)
+                if (!m_board.GetCell(x, y).IsEmpty)
+                    return false;
+        return true;
+    }
+
     private void OnGameStateChange(GameManager.eStateGame state)
     {
         switch (state)

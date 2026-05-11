@@ -45,6 +45,9 @@ public class GameManager : MonoBehaviour
     private bool m_autoMode = false;
     private Coroutine m_autoCoroutine;
 
+    public eLevelMode LevelMode { get { return m_levelMode; } }
+    public float TimeRemaining { get { return m_timeRemaining; } }
+
     private void Awake()
     {
         State = eStateGame.SETUP;
@@ -252,5 +255,5 @@ public class GameManager : MonoBehaviour
             m_timerCoroutine = null;
         }
     }
-    
+
 }
