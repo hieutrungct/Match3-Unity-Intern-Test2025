@@ -60,6 +60,11 @@ public class BoardController : MonoBehaviour
             GameObject slotGO = new GameObject("Slot" + i);
             slotGO.transform.SetParent(bottomObj.transform);
             slotGO.transform.position = new Vector3(startX + i * 1f, -4, 0);
+
+            var collider = slotGO.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(1f, 1f);
+            collider.isTrigger = true;
+
             positions[i] = slotGO.transform;
         }
         m_bottomSlotManager.Initialize(positions);
@@ -126,6 +131,21 @@ public class BoardController : MonoBehaviour
                 if (cell != null && !cell.IsEmpty)
                 {
                     StartCoroutine(MoveItemToBottom(cell));
+                    return;
+                }
+
+                // Check if clicked on bottom slot
+                for (int i = 0; i < m_bottomSlotManager.SlotPositions.Length; i++)
+                {
+                    if (hit.collider.transform == m_bottomSlotManager.SlotPositions[i])
+                    {
+                        BottomSlotManager.BottomSlot slot = m_bottomSlotManager.Slots[i];
+                        if (slot.item != null && slot.originalCell != null && slot.originalCell.IsEmpty)
+                        {
+                            StartCoroutine(MoveItemBack(slot));
+                        }
+                        return;
+                    }
                 }
             }
         }
@@ -137,7 +157,7 @@ public class BoardController : MonoBehaviour
         if (item == null) { IsBusy = false; yield break; }
 
         // Thử thêm vào bottom
-        bool success = m_bottomSlotManager.AddItem(item, () =>
+        bool success = m_bottomSlotManager.AddItem(item, cell, () =>
         {
             // Sau khi animation di chuyển hoàn tất, xóa item khỏi cell
             cell.Free();
@@ -156,6 +176,28 @@ public class BoardController : MonoBehaviour
         // Kiểm tra bảng trống
         CheckBoardEmpty();
 
+        IsBusy = false;
+    }
+
+    public IEnumerator MoveItemBack(BottomSlotManager.BottomSlot slot)
+    {
+        IsBusy = true;
+        Item item = slot.item;
+        if (item == null || slot.originalCell == null || !slot.originalCell.IsEmpty)
+        {
+            IsBusy = false;
+            yield break;
+        }
+
+        // Move item back to original cell
+        item.View.DOMove(slot.originalCell.transform.position, 0.2f).OnComplete(() =>
+        {
+            slot.originalCell.Assign(item);
+            slot.item = null;
+            slot.originalCell = null;
+        });
+
+        yield return new WaitForSeconds(0.25f);
         IsBusy = false;
     }
 

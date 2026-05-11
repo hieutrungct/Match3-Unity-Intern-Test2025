@@ -472,7 +472,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &403727708
 RectTransform:
   m_ObjectHideFlags: 0
@@ -592,7 +592,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58dc20659ef88c14283f43c79d97b5f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TimeView: {fileID: 0}
+  TimeView: {fileID: 2032806873}
   btnPause: {fileID: 264367786}
 --- !u!1 &459018135
 GameObject:
@@ -2080,7 +2080,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   btnMoves: {fileID: 459018137}
-  btnTimeChallenge: {fileID: 0}
+  btnTimeChallenge: {fileID: 319318113}
 --- !u!1 &1545288377
 GameObject:
   m_ObjectHideFlags: 0

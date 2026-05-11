@@ -12,6 +12,9 @@ public class BottomSlotManager : MonoBehaviour
     public event System.Action OnBottomFull;
     public event System.Action OnItemsMatched;
 
+    public BottomSlot[] Slots { get { return slots; } }
+    public Transform[] SlotPositions { get { return slotPositions; } }
+
     public void Initialize(Transform[] positions)
     {
         slotPositions = positions;
@@ -21,18 +24,19 @@ public class BottomSlotManager : MonoBehaviour
         {
             slots[i] = new BottomSlot();
             slots[i].transform = slotPositions[i];
-            
+
             slots[i].item = null;
         }
     }
     // Thêm item vào ô trống đầu tiên
-    public bool AddItem(Item item, System.Action onComplete = null)
+    public bool AddItem(Item item, Cell originalCell, System.Action onComplete = null)
     {
         for (int i = 0; i < slotCount; i++)
         {
             if (slots[i].item == null)
             {
                 slots[i].item = item;
+                slots[i].originalCell = originalCell;
                 // Di chuyển view đến vị trí slot
                 item.View.DOMove(slots[i].transform.position, 0.2f).OnComplete(() =>
                 {
@@ -76,6 +80,7 @@ public class BottomSlotManager : MonoBehaviour
                         int idx = kvp.Value[i];
                         slots[idx].item.ExplodeView(); // tự động destroy view
                         slots[idx].item = null;
+                        slots[idx].originalCell = null;
                     }
                     OnItemsMatched?.Invoke();
                     break; // sau khi xóa, thoát vòng lặp và kiểm tra lại từ đầu
@@ -99,14 +104,16 @@ public class BottomSlotManager : MonoBehaviour
             {
                 slot.item.Clear();
                 slot.item = null;
+                slot.originalCell = null;
             }
         }
     }
 
-    private class BottomSlot
+    public class BottomSlot
     {
         public Transform transform;
         public Item item;
+        public Cell originalCell;
     }
     public List<NormalItem.eNormalType> GetCurrentTypes()
     {
