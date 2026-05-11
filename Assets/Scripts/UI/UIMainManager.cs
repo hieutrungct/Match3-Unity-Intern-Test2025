@@ -69,6 +69,9 @@ public class UIMainManager : MonoBehaviour
             case GameManager.eStateGame.GAME_OVER:
                 ShowMenu<UIPanelGameOver>();
                 break;
+            case GameManager.eStateGame.WIN:
+                ShowMenu<UIPanelWin>();
+                break;
         }
     }
 
@@ -88,16 +91,16 @@ public class UIMainManager : MonoBehaviour
         }
     }
 
-    internal Text GetLevelConditionView()
-    {
-        UIPanelGame game = m_menuList.Where(x => x is UIPanelGame).Cast<UIPanelGame>().FirstOrDefault();
-        if (game)
-        {
-            return game.LevelConditionView;
-        }
+    // internal Text GetLevelConditionView()
+    // {
+    //     UIPanelGame game = m_menuList.Where(x => x is UIPanelGame).Cast<UIPanelGame>().FirstOrDefault();
+    //     if (game)
+    //     {
+    //         return game.LevelConditionView;
+    //     }
 
-        return null;
-    }
+    //     return null;
+    // }
 
     internal void ShowPauseMenu()
     {
@@ -114,8 +117,14 @@ public class UIMainManager : MonoBehaviour
         m_gameManager.LoadLevel(GameManager.eLevelMode.TIMER);
     }
 
+    internal void LoadLevelTimeChallenge()
+    {
+        m_gameManager.LoadLevel(GameManager.eLevelMode.TIME_CHALLENGE);
+    }
+
     internal void ShowGameMenu()
     {
         m_gameManager.SetState(GameManager.eStateGame.GAME_STARTED);
     }
+    
 }

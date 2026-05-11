@@ -22,6 +22,7 @@ public class BoardController : MonoBehaviour
     private Collider2D m_hitCollider;
 
     private GameSettings m_gameSettings;
+    private BottomSlotManager m_bottomSlotManager;
 
     private List<Cell> m_potentialMatch;
 
@@ -30,6 +31,8 @@ public class BoardController : MonoBehaviour
     private bool m_hintIsShown;
 
     private bool m_gameOver;
+    public event Action OnBoardEmpty = delegate { };
+    public event Action OnBottomFull = delegate { };
 
     public void StartGame(GameManager gameManager, GameSettings gameSettings)
     {
@@ -43,13 +46,45 @@ public class BoardController : MonoBehaviour
 
         m_board = new Board(this.transform, gameSettings);
 
+        // Tạo bottom slots
+        GameObject bottomObj = new GameObject("BottomSlots");
+        bottomObj.transform.SetParent(this.transform);
+        bottomObj.transform.position = new Vector3(0, -m_gameSettings.BoardSizeY * 0.5f - 1f, 0);
+        m_bottomSlotManager = bottomObj.AddComponent<BottomSlotManager>();
+
+        // Tạo 5 vị trí động
+        Transform[] positions = new Transform[5];
+        float startX = -2f;
+        for (int i = 0; i < 5; i++)
+        {
+            GameObject slotGO = new GameObject("Slot" + i);
+            slotGO.transform.SetParent(bottomObj.transform);
+            slotGO.transform.position = new Vector3(startX + i * 1f, -4, 0);
+            positions[i] = slotGO.transform;
+        }
+        m_bottomSlotManager.Initialize(positions);
+        m_bottomSlotManager.OnBottomFull += () => { if (!m_gameOver) OnBottomFull?.Invoke(); };
+        m_bottomSlotManager.OnItemsMatched += () => { }; // có thể thêm hiệu ứng
+
         Fill();
     }
 
     private void Fill()
     {
         m_board.Fill();
-        FindMatchesAndCollapse();
+        // FindMatchesAndCollapse();
+        // Sau khi fill, kiểm tra nếu bảng trống ngay từ đầu(không thể)
+        CheckBoardEmpty();
+    }
+    private void CheckBoardEmpty()
+    {
+        for (int x = 0; x < m_gameSettings.BoardSizeX; x++)
+            for (int y = 0; y < m_gameSettings.BoardSizeY; y++)
+                if (!m_board.GetCell(x, y).IsEmpty)
+                    return;
+        // Bảng trống -> thắng
+        if (!m_gameOver)
+            OnBoardEmpty?.Invoke();
     }
 
     private void OnGameStateChange(GameManager.eStateGame state)
@@ -64,72 +99,117 @@ public class BoardController : MonoBehaviour
                 break;
             case GameManager.eStateGame.GAME_OVER:
                 m_gameOver = true;
-                StopHints();
+                // StopHints();
                 break;
         }
     }
 
-
     public void Update()
     {
-        if (m_gameOver) return;
-        if (IsBusy) return;
-
-        if (!m_hintIsShown)
-        {
-            m_timeAfterFill += Time.deltaTime;
-            if (m_timeAfterFill > m_gameSettings.TimeForHint)
-            {
-                m_timeAfterFill = 0f;
-                ShowHint();
-            }
-        }
+        if (m_gameOver || IsBusy) return;
 
         if (Input.GetMouseButtonDown(0))
         {
-            var hit = Physics2D.Raycast(m_cam.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
+            RaycastHit2D hit = Physics2D.Raycast(m_cam.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
             if (hit.collider != null)
             {
-                m_isDragging = true;
-                m_hitCollider = hit.collider;
-            }
-        }
-
-        if (Input.GetMouseButtonUp(0))
-        {
-            ResetRayCast();
-        }
-
-        if (Input.GetMouseButton(0) && m_isDragging)
-        {
-            var hit = Physics2D.Raycast(m_cam.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
-            if (hit.collider != null)
-            {
-                if (m_hitCollider != null && m_hitCollider != hit.collider)
+                Cell cell = hit.collider.GetComponent<Cell>();
+                if (cell != null && !cell.IsEmpty)
                 {
-                    StopHints();
-
-                    Cell c1 = m_hitCollider.GetComponent<Cell>();
-                    Cell c2 = hit.collider.GetComponent<Cell>();
-                    if (AreItemsNeighbor(c1, c2))
-                    {
-                        IsBusy = true;
-                        SetSortingLayer(c1, c2);
-                        m_board.Swap(c1, c2, () =>
-                        {
-                            FindMatchesAndCollapse(c1, c2);
-                        });
-
-                        ResetRayCast();
-                    }
+                    StartCoroutine(MoveItemToBottom(cell));
                 }
-            }
-            else
-            {
-                ResetRayCast();
             }
         }
     }
+    public IEnumerator MoveItemToBottom(Cell cell)
+    {
+        IsBusy = true;
+        Item item = cell.Item;
+        if (item == null) { IsBusy = false; yield break; }
+
+        // Thử thêm vào bottom
+        bool success = m_bottomSlotManager.AddItem(item, () =>
+        {
+            // Sau khi animation di chuyển hoàn tất, xóa item khỏi cell
+            cell.Free();
+        });
+        if (!success)
+        {
+            // Bottom đầy -> thua (sự kiện đã gọi)
+            IsBusy = false;
+            yield break;
+        }
+
+        // Chờ animation di chuyển (0.2s) + một chút
+        yield return new WaitForSeconds(0.25f);
+        // Kiểm tra match trong bottom
+        m_bottomSlotManager.CheckAndClearMatches();
+        // Kiểm tra bảng trống
+        CheckBoardEmpty();
+
+        IsBusy = false;
+    }
+
+    // public void Update()
+    // {
+    //     if (m_gameOver) return;
+    //     if (IsBusy) return;
+
+    //     if (!m_hintIsShown)
+    //     {
+    //         m_timeAfterFill += Time.deltaTime;
+    //         if (m_timeAfterFill > m_gameSettings.TimeForHint)
+    //         {
+    //             m_timeAfterFill = 0f;
+    //             ShowHint();
+    //         }
+    //     }
+
+    //     if (Input.GetMouseButtonDown(0))
+    //     {
+    //         var hit = Physics2D.Raycast(m_cam.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
+    //         if (hit.collider != null)
+    //         {
+    //             m_isDragging = true;
+    //             m_hitCollider = hit.collider;
+    //         }
+    //     }
+
+    //     if (Input.GetMouseButtonUp(0))
+    //     {
+    //         ResetRayCast();
+    //     }
+
+    //     if (Input.GetMouseButton(0) && m_isDragging)
+    //     {
+    //         var hit = Physics2D.Raycast(m_cam.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
+    //         if (hit.collider != null)
+    //         {
+    //             if (m_hitCollider != null && m_hitCollider != hit.collider)
+    //             {
+    //                 StopHints();
+
+    //                 Cell c1 = m_hitCollider.GetComponent<Cell>();
+    //                 Cell c2 = hit.collider.GetComponent<Cell>();
+    //                 if (AreItemsNeighbor(c1, c2))
+    //                 {
+    //                     IsBusy = true;
+    //                     SetSortingLayer(c1, c2);
+    //                     m_board.Swap(c1, c2, () =>
+    //                     {
+    //                         FindMatchesAndCollapse(c1, c2);
+    //                     });
+
+    //                     ResetRayCast();
+    //                 }
+    //             }
+    //         }
+    //         else
+    //         {
+    //             ResetRayCast();
+    //         }
+    //     }
+    // }
 
     private void ResetRayCast()
     {
@@ -282,6 +362,7 @@ public class BoardController : MonoBehaviour
     internal void Clear()
     {
         m_board.Clear();
+        m_bottomSlotManager.ClearAll();
     }
 
     private void ShowHint()
@@ -302,5 +383,31 @@ public class BoardController : MonoBehaviour
         }
 
         m_potentialMatch.Clear();
+    }
+    // Helper để auto player lấy danh sách cell không rỗng
+    public System.Collections.Generic.List<Cell> GetNonEmptyCells()
+    {
+        var list = new System.Collections.Generic.List<Cell>();
+        for (int x = 0; x < m_gameSettings.BoardSizeX; x++)
+            for (int y = 0; y < m_gameSettings.BoardSizeY; y++)
+            {
+                var cell = m_board.GetCell(x, y);
+                if (!cell.IsEmpty) list.Add(cell);
+            }
+        return list;
+    }
+
+    public bool IsGameOver => m_gameOver;
+    public void SetGameOver(bool over) => m_gameOver = over;
+    // Hỏi bottom slot manager xem thêm item loại X có tạo match không
+    public bool WouldCreateMatch(NormalItem.eNormalType type)
+    {
+        return m_bottomSlotManager.WouldCreateMatch(type);
+    }
+
+    // Lấy danh sách các loại item hiện có dưới bottom (có thể dùng để debug)
+    public List<NormalItem.eNormalType> GetBottomSlotTypes()
+    {
+        return m_bottomSlotManager.GetCurrentTypes();
     }
 }

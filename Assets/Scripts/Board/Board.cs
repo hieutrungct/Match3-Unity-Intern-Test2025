@@ -7,6 +7,7 @@ using UnityEngine;
 
 public class Board
 {
+    
     public enum eMatchDirection
     {
         NONE,
@@ -72,44 +73,91 @@ public class Board
 
     }
 
+    // internal void Fill()
+    // {
+    //     for (int x = 0; x < boardSizeX; x++)
+    //     {
+    //         for (int y = 0; y < boardSizeY; y++)
+    //         {
+    //             Cell cell = m_cells[x, y];
+    //             NormalItem item = new NormalItem();
+
+    //             List<NormalItem.eNormalType> types = new List<NormalItem.eNormalType>();
+    //             if (cell.NeighbourBottom != null)
+    //             {
+    //                 NormalItem nitem = cell.NeighbourBottom.Item as NormalItem;
+    //                 if (nitem != null)
+    //                 {
+    //                     types.Add(nitem.ItemType);
+    //                 }
+    //             }
+
+    //             if (cell.NeighbourLeft != null)
+    //             {
+    //                 NormalItem nitem = cell.NeighbourLeft.Item as NormalItem;
+    //                 if (nitem != null)
+    //                 {
+    //                     types.Add(nitem.ItemType);
+    //                 }
+    //             }
+
+    //             item.SetType(Utils.GetRandomNormalTypeExcept(types.ToArray()));
+    //             item.SetView();
+    //             item.SetViewRoot(m_root);
+
+    //             cell.Assign(item);
+    //             cell.ApplyItemPosition(false);
+    //         }
+    //     }
+    // }
+    // Trong Board.cs, thay phương thức Fill()
     internal void Fill()
     {
+        int totalCells = boardSizeX * boardSizeY;
+        int typeCount = System.Enum.GetValues(typeof(NormalItem.eNormalType)).Length;
+        // Mỗi loại xuất hiện ít nhất 3 lần, tổng các bội số phải bằng totalCells
+        // Đơn giản: tạo list item với mỗi loại lặp lại 3 lần cho đến khi đủ số ô
+        List<NormalItem.eNormalType> itemTypes = new List<NormalItem.eNormalType>();
+        while (itemTypes.Count < totalCells)
+        {
+            foreach (NormalItem.eNormalType type in System.Enum.GetValues(typeof(NormalItem.eNormalType)))
+            {
+                if (itemTypes.Count + 3 <= totalCells)
+                {
+                    itemTypes.Add(type);
+                    itemTypes.Add(type);
+                    itemTypes.Add(type);
+                }
+                else break;
+            }
+        }
+        // Xáo trộn danh sách
+        for (int i = 0; i < itemTypes.Count; i++)
+        {
+            int r = UnityEngine.Random.Range(i, itemTypes.Count);
+            var temp = itemTypes[i];
+            itemTypes[i] = itemTypes[r];
+            itemTypes[r] = temp;
+        }
+
+        // Gán vào bảng
+        int idx = 0;
         for (int x = 0; x < boardSizeX; x++)
         {
             for (int y = 0; y < boardSizeY; y++)
             {
                 Cell cell = m_cells[x, y];
                 NormalItem item = new NormalItem();
-
-                List<NormalItem.eNormalType> types = new List<NormalItem.eNormalType>();
-                if (cell.NeighbourBottom != null)
-                {
-                    NormalItem nitem = cell.NeighbourBottom.Item as NormalItem;
-                    if (nitem != null)
-                    {
-                        types.Add(nitem.ItemType);
-                    }
-                }
-
-                if (cell.NeighbourLeft != null)
-                {
-                    NormalItem nitem = cell.NeighbourLeft.Item as NormalItem;
-                    if (nitem != null)
-                    {
-                        types.Add(nitem.ItemType);
-                    }
-                }
-
-                item.SetType(Utils.GetRandomNormalTypeExcept(types.ToArray()));
+                item.SetType(itemTypes[idx++]);
                 item.SetView();
                 item.SetViewRoot(m_root);
-
                 cell.Assign(item);
                 cell.ApplyItemPosition(false);
             }
         }
     }
-
+    public Cell GetCell(int x, int y) => m_cells[x, y];
+    
     internal void Shuffle()
     {
         List<Item> list = new List<Item>();

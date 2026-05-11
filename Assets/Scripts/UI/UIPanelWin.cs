@@ -1,0 +1,37 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class UIPanelWin : MonoBehaviour, IMenu
+{
+    private UIMainManager m_mngr;
+    [SerializeField] private Button btnClose;
+    public void Hide()
+    {
+        this.gameObject.SetActive(false);
+    }
+
+    public void Setup(UIMainManager mngr)
+    {
+        m_mngr = mngr;
+    }
+
+    public void Show()
+    {
+        this.gameObject.SetActive(true);
+    }
+    private void Awake()
+    {
+        btnClose.onClick.AddListener(OnClickClose);
+    }
+    private void OnClickClose()
+    {
+        m_mngr.ShowMainMenu();
+    }
+
+    private void OnDestroy()
+    {
+        if (btnClose) btnClose.onClick.RemoveAllListeners();
+    }
+}

@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+
 public class UIPanelGameOver : MonoBehaviour, IMenu
 {
     [SerializeField] private Button btnClose;
 
+    public bool type;
     private UIMainManager m_mngr;
 
     private void Awake()
@@ -38,5 +40,12 @@ public class UIPanelGameOver : MonoBehaviour, IMenu
     {
         this.gameObject.SetActive(true);
     }
+    public void ShowPanel(bool isWin)
+    {
+        this.gameObject.SetActive(isWin);
+    }
+    
+    
+    
 
 }

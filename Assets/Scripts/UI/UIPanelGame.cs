@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public class UIPanelGame : MonoBehaviour,IMenu
 {
-    public Text LevelConditionView;
+    public Text TimeView; // nút hiển thị thời gian còn lại (chỉ dùng trong time trial)
 
     [SerializeField] private Button btnPause;
 
